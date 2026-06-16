@@ -3,12 +3,12 @@
 <head>
   <meta charset="UTF-8" />
   <meta name="viewport" content="width=device-width, initial-scale=1.0" />
-  <title>PDF-faktura parser – filter og kolonnevalg</title>
+  <title>PDF-faktura parser – lagret visning og nodesortering</title>
   <style>
     :root{--bg:#0b1220;--panel:#111a2b;--border:#23324d;--text:#e8eef9;--muted:#9fb0d1;--accent:#4f8cff;--ok:#10b981;--warn:#f59e0b;--shadow:0 12px 28px rgba(0,0,0,.28);--radius:18px}
     *{box-sizing:border-box}
     body{margin:0;font-family:Inter,Segoe UI,Roboto,Arial,sans-serif;background:linear-gradient(180deg,#08101c 0%,#0b1220 100%);color:var(--text)}
-    .wrap{max-width:1360px;margin:0 auto;padding:20px}
+    .wrap{max-width:1400px;margin:0 auto;padding:20px}
     .hero{display:grid;gap:14px;grid-template-columns:1.2fr .8fr;align-items:stretch;margin-bottom:20px}
     .card{background:linear-gradient(180deg,rgba(255,255,255,.02),rgba(255,255,255,.01));border:1px solid var(--border);border-radius:var(--radius);box-shadow:var(--shadow);overflow:hidden}
     .card-body{padding:18px}
@@ -30,7 +30,7 @@
     .stat-label{color:var(--muted);font-size:13px}.stat-value{font-size:27px;font-weight:800;margin-top:8px}
     .section-title{padding:16px 18px;border-bottom:1px solid var(--border);display:flex;align-items:center;justify-content:space-between;gap:10px;flex-wrap:wrap}.section-title h2{margin:0;font-size:18px}
     .table-wrap{width:100%;overflow:auto}
-    table{width:100%;border-collapse:collapse;min-width:1080px}
+    table{width:100%;border-collapse:collapse;min-width:1120px}
     th,td{padding:12px 14px;border-bottom:1px solid rgba(255,255,255,.06);text-align:left;vertical-align:top;white-space:nowrap}
     th{position:sticky;top:0;z-index:1;background:#111a2b;color:#c8d6f1;font-size:13px}
     td.wraptext{white-space:normal}
@@ -42,7 +42,7 @@
     .footer-note{font-size:13px;padding:14px 18px 18px;border-top:1px solid rgba(255,255,255,.06)}
     code{background:rgba(255,255,255,.06);padding:.1rem .35rem;border-radius:6px}
     .filters{display:grid;grid-template-columns:1.2fr .8fr;gap:14px}
-    .filter-grid{display:grid;grid-template-columns:repeat(3, minmax(180px,1fr));gap:12px}
+    .filter-grid{display:grid;grid-template-columns:repeat(4, minmax(150px,1fr));gap:12px}
     .field{display:flex;flex-direction:column;gap:6px}
     .field label{font-size:13px;color:var(--muted)}
     .field input[type=text], .field select{height:42px;border-radius:12px;border:1px solid #2b3c5d;background:#0f1930;color:var(--text);padding:0 12px}
@@ -50,9 +50,18 @@
     .check{display:flex;align-items:center;gap:8px;color:var(--text)}
     .check input{accent-color:#4f8cff}
     .column-list{display:grid;grid-template-columns:repeat(3,minmax(140px,1fr));gap:10px}
+    .pill{display:inline-flex;align-items:center;gap:8px;padding:8px 12px;border:1px solid rgba(79,140,255,.35);border-radius:999px;background:rgba(79,140,255,.08);color:#dbe8ff;font-size:12px}
+    .modal-backdrop{position:fixed;inset:0;background:rgba(0,0,0,.45);display:none;align-items:center;justify-content:center;padding:16px;z-index:2000}
+    .modal-backdrop.show{display:flex}
+    .modal{width:min(780px,100%);max-height:85vh;overflow:auto;background:#10192d;border:1px solid var(--border);border-radius:18px;box-shadow:var(--shadow)}
+    .modal-header,.modal-footer{padding:16px 18px;border-bottom:1px solid rgba(255,255,255,.06)}
+    .modal-footer{border-top:1px solid rgba(255,255,255,.06);border-bottom:none;display:flex;justify-content:flex-end;gap:10px}
+    .order-list{padding:12px 18px;display:grid;gap:10px}
+    .order-item{display:grid;grid-template-columns:1fr auto;gap:12px;align-items:center;padding:12px;border:1px solid rgba(255,255,255,.08);border-radius:12px;background:rgba(255,255,255,.02)}
+    .order-actions{display:flex;gap:8px}
     @media (max-width:1100px){.filters{grid-template-columns:1fr}.filter-grid{grid-template-columns:1fr 1fr}.column-list{grid-template-columns:repeat(2,minmax(140px,1fr))}}
     @media (max-width:980px){.hero{grid-template-columns:1fr}.grid{grid-template-columns:repeat(2,1fr)}}
-    @media (max-width:640px){.wrap{padding:14px}.grid,.filter-grid,.column-list{grid-template-columns:1fr}.title{font-size:24px}.drop-title{font-size:20px}}
+    @media (max-width:640px){.wrap{padding:14px}.grid,.filter-grid,.column-list{grid-template-columns:1fr}.title{font-size:24px}.drop-title{font-size:20px}.order-item{grid-template-columns:1fr}}
   </style>
 </head>
 <body>
@@ -60,13 +69,14 @@
   <div class="hero">
     <div class="card"><div class="card-body">
       <h1 class="title">PDF-faktura parser for noderom</h1>
-      <p class="subtitle">Oppdatert versjon med <strong>KWh-fiks</strong>, <strong>filter</strong>, <strong>kolonnevalg</strong> og automatisk sortering der <strong>Ukjent</strong> alltid legger seg nederst.</p>
+      <p class="subtitle">Nå med <strong>lagret visning</strong> og <strong>sortering av noder</strong>. Valg lagres i nettleseren, slik at siden ser lik ut neste gang du åpner den.</p>
       <div class="btns">
         <button id="pickBtn" class="primary">Velg PDF</button>
         <button id="sampleBtn" class="ghost">Last testvisning</button>
-        <button id="clearBtn" class="ghost">Nullstill</button>
+        <button id="clearBtn" class="ghost">Nullstill data</button>
+        <button id="resetViewBtn" class="ghost">Nullstill visning</button>
       </div>
-      <div class="help" style="margin-top:14px"><strong>Nytt:</strong> Du kan nå skjule <code>Ukjent</code>, filtrere på status/søk, og velge hvilke kolonner som skal vises.</div>
+      <div class="help" style="margin-top:14px"><strong>Nytt:</strong> Du kan velge sortering, lage egen node-rekkefølge og lagre visningen automatisk i nettleseren.</div>
     </div></div>
     <label class="dropzone card" id="dropzone" for="fileInput">
       <div class="drop-icon">📄</div>
@@ -84,7 +94,7 @@
   </div>
 
   <div class="card" style="margin-bottom:18px;">
-    <div class="section-title"><h2>Filter og visning</h2></div>
+    <div class="section-title"><h2>Filter, sortering og visning</h2><span class="pill" id="saveStateText">Visning lagres automatisk</span></div>
     <div class="card-body filters">
       <div>
         <div class="filter-grid">
@@ -110,10 +120,24 @@
               <option value="Ingen match">Ingen match</option>
             </select>
           </div>
+          <div class="field">
+            <label for="sortMode">Sorter etter</label>
+            <select id="sortMode">
+              <option value="custom">Egendefinert node-rekkefølge</option>
+              <option value="node_asc">Node A-Å</option>
+              <option value="node_desc">Node Å-A</option>
+              <option value="kwh_desc">KWh høyest først</option>
+              <option value="kwh_asc">KWh lavest først</option>
+              <option value="sum_desc">Sum inkl. høyest først</option>
+              <option value="sum_asc">Sum inkl. lavest først</option>
+              <option value="page_asc">Side lavest først</option>
+            </select>
+          </div>
         </div>
         <div class="check-row" style="margin-top:12px">
           <label class="check"><input type="checkbox" id="hideUnknownChk" /> Skjul ukjente</label>
           <label class="check"><input type="checkbox" id="sortUnknownBottomChk" checked /> Legg ukjente nederst</label>
+          <button id="editOrderBtn" class="ghost" type="button">Rediger node-rekkefølge</button>
         </div>
       </div>
 
@@ -127,13 +151,30 @@
   <div class="card" style="margin-bottom:18px;">
     <div class="section-title"><h2>Resultater</h2><div class="btns" style="margin-top:0"><button id="csvBtn" class="good" disabled>Eksporter CSV</button><button id="copyBtn" class="ghost" disabled>Kopier tabell</button></div></div>
     <div class="table-wrap"><table><thead><tr id="theadRow"></tr></thead><tbody id="resultBody"><tr><td colspan="10" class="wraptext muted">Ingen data enda. Dra inn en PDF for å starte.</td></tr></tbody></table></div>
-    <div class="footer-note">Hvis du er på jobbnett og CDN er blokkert, legg <code>pdf.min.js</code> og <code>pdf.worker.min.js</code> i samme mappe som <code>index.html</code>.</div>
+    <div class="footer-note">Tips: hvis siden er som du vil ha den, trenger du ikke gjøre noe mer. Valgt visning blir husket neste gang du åpner siden på samme enhet/nettleser.</div>
   </div>
 
   <div class="card"><div class="section-title"><h2>Logg</h2></div><div class="log" id="log">Klar.</div></div>
 </div>
+
+<div class="modal-backdrop" id="orderModalBackdrop">
+  <div class="modal">
+    <div class="modal-header">
+      <h2 style="margin:0;font-size:18px">Egendefinert node-rekkefølge</h2>
+      <div class="help">Bruk pil opp/ned for å bestemme hvilken rekkefølge nodene skal vises i når sortering står på <code>Egendefinert node-rekkefølge</code>.</div>
+    </div>
+    <div class="order-list" id="orderList"></div>
+    <div class="modal-footer">
+      <button id="resetOrderBtn" class="ghost" type="button">Tilbakestill rekkefølge</button>
+      <button id="closeOrderBtn" class="primary" type="button">Lukk</button>
+    </div>
+  </div>
+</div>
+
 <script>
+const STORAGE_KEY='pdf_parser_view_v2';
 const NODES=[{name:'Bugården',address:'Tennisveien 19',lookupId:'7359992897199153'},{name:'Enga',address:'Enga 7',lookupId:'707057500041899633'},{name:'Framnes',address:'Lyhmannsvei',lookupId:'7359992927470023'},{name:'Gjekstad',address:'Nordre Gjekstadskog',lookupId:'7359992900456587'},{name:'Hunsrød',address:'Sønder Kullerød',lookupId:'7359992894094475'},{name:'Hvalmus',address:'Museumsgata 39',lookupId:'707057500042332375'},{name:'Kilen',address:'Hegnasletta 9',lookupId:'7359992895276245'},{name:'Klavnes',address:'Galsrødveien 20',lookupId:'707057500042358801'},{name:'Krokenskogen',address:'Laurasvei 5',lookupId:'7359992899166894'},{name:'Krokemoa',address:'Krokmoveien',lookupId:'7359992925909440'},{name:'Nygaard',address:'Feltspatveien 14',lookupId:'7359992891316730'},{name:'Solløkka',address:'Årøveien 80',lookupId:'707057500041964201'},{name:'Store Bergan',address:'Haneholmveien 170',lookupId:'7359992895291842'},{name:'Strandskog',address:'Østerøyveien 214',lookupId:'7359992909921154'},{name:'Varden',address:'Vardeveien 52',lookupId:'7359992903905136'},{name:'Vesterøya',address:'Vertøyveien 255',lookupId:'7359992900839304'}];
+const DEFAULT_ORDER=NODES.map(n=>n.name);
 const COLUMNS=[
   {key:'status',label:'Status',visible:true},
   {key:'nodeName',label:'Node',visible:true},
@@ -146,10 +187,12 @@ const COLUMNS=[
   {key:'matchReason',label:'Matchgrunnlag',visible:true},
   {key:'pageNum',label:'Side',visible:true}
 ];
-const els={fileInput:document.getElementById('fileInput'),pickBtn:document.getElementById('pickBtn'),sampleBtn:document.getElementById('sampleBtn'),clearBtn:document.getElementById('clearBtn'),dropzone:document.getElementById('dropzone'),log:document.getElementById('log'),resultBody:document.getElementById('resultBody'),csvBtn:document.getElementById('csvBtn'),copyBtn:document.getElementById('copyBtn'),statCount:document.getElementById('statCount'),statKwh:document.getElementById('statKwh'),statInc:document.getElementById('statInc'),statEx:document.getElementById('statEx'),searchInput:document.getElementById('searchInput'),statusFilter:document.getElementById('statusFilter'),matchFilter:document.getElementById('matchFilter'),hideUnknownChk:document.getElementById('hideUnknownChk'),sortUnknownBottomChk:document.getElementById('sortUnknownBottomChk'),columnToggles:document.getElementById('columnToggles'),theadRow:document.getElementById('theadRow')};
+const els={fileInput:document.getElementById('fileInput'),pickBtn:document.getElementById('pickBtn'),sampleBtn:document.getElementById('sampleBtn'),clearBtn:document.getElementById('clearBtn'),resetViewBtn:document.getElementById('resetViewBtn'),dropzone:document.getElementById('dropzone'),log:document.getElementById('log'),resultBody:document.getElementById('resultBody'),csvBtn:document.getElementById('csvBtn'),copyBtn:document.getElementById('copyBtn'),statCount:document.getElementById('statCount'),statKwh:document.getElementById('statKwh'),statInc:document.getElementById('statInc'),statEx:document.getElementById('statEx'),searchInput:document.getElementById('searchInput'),statusFilter:document.getElementById('statusFilter'),matchFilter:document.getElementById('matchFilter'),sortMode:document.getElementById('sortMode'),hideUnknownChk:document.getElementById('hideUnknownChk'),sortUnknownBottomChk:document.getElementById('sortUnknownBottomChk'),columnToggles:document.getElementById('columnToggles'),theadRow:document.getElementById('theadRow'),saveStateText:document.getElementById('saveStateText'),editOrderBtn:document.getElementById('editOrderBtn'),orderModalBackdrop:document.getElementById('orderModalBackdrop'),orderList:document.getElementById('orderList'),closeOrderBtn:document.getElementById('closeOrderBtn'),resetOrderBtn:document.getElementById('resetOrderBtn')};
+
 let rawRows=[];
 let currentRows=[];
 let columnState=Object.fromEntries(COLUMNS.map(c=>[c.key,c.visible]));
+let customNodeOrder=[...DEFAULT_ORDER];
 
 function log(msg,type='info'){const ts=new Date().toLocaleTimeString('no-NO');const p=type==='error'?'FEIL':type==='warn'?'ADVARSEL':'INFO';els.log.textContent+=`\n[${ts}] ${p}: ${msg}`;els.log.scrollTop=els.log.scrollHeight}
 function resetLog(){els.log.textContent='Klar.'}
@@ -184,60 +227,70 @@ function matchNode(row){const meter=digitsOnly(row.meter),mpid=digitsOnly(row.mp
 function loadScript(src){return new Promise((resolve,reject)=>{const s=document.createElement('script');s.src=src;s.onload=()=>resolve(src);s.onerror=()=>reject(new Error('Kunne ikke laste '+src));document.head.appendChild(s);});}
 async function ensurePdfJs(){if(window.pdfjsLib)return window.pdfjsLib;log('Forsøker lokal PDF.js ...');try{await loadScript('./pdf.min.js');if(window.pdfjsLib){window.pdfjsLib.GlobalWorkerOptions.workerSrc='./pdf.worker.min.js';log('PDF.js lastet lokalt fra samme mappe som index.html');return window.pdfjsLib}}catch(err){log(err.message,'warn')}log('Forsøker CDN fallback ...');const cdnPairs=[{main:'https://cdnjs.cloudflare.com/ajax/libs/pdf.js/2.6.347/pdf.min.js',worker:'https://cdnjs.cloudflare.com/ajax/libs/pdf.js/2.6.347/pdf.worker.min.js'},{main:'https://unpkg.com/pdfjs-dist@2.6.347/build/pdf.min.js',worker:'https://unpkg.com/pdfjs-dist@2.6.347/build/pdf.worker.min.js'}];for(const pair of cdnPairs){try{await loadScript(pair.main);if(window.pdfjsLib){window.pdfjsLib.GlobalWorkerOptions.workerSrc=pair.worker;log('PDF.js lastet fra CDN: '+pair.main);return window.pdfjsLib}}catch(err){log(err.message,'warn')}}throw new Error('PDF.js ble ikke lastet. Verken lokal fil eller CDN fungerte.')}
 async function extractTextFromPdf(file){const lib=await ensurePdfJs();const buffer=await file.arrayBuffer();const task=lib.getDocument({data:buffer});const pdf=await task.promise;log(`PDF lastet: ${file.name} (${pdf.numPages} sider)`);const pages=[];for(let i=1;i<=pdf.numPages;i++){const page=await pdf.getPage(i);const tc=await page.getTextContent();pages.push({pageNum:i,text:tc.items.map(it=>it.str).join(' ')})}return pages}
+
+function getState(){return {search:els.searchInput.value,status:els.statusFilter.value,match:els.matchFilter.value,sortMode:els.sortMode.value,hideUnknown:els.hideUnknownChk.checked,sortUnknownBottom:els.sortUnknownBottomChk.checked,columns:columnState,nodeOrder:customNodeOrder};}
+function saveViewState(){try{localStorage.setItem(STORAGE_KEY, JSON.stringify(getState())); els.saveStateText.textContent='Visning lagret automatisk';}catch(e){els.saveStateText.textContent='Kunne ikke lagre visning';}}
+function loadViewState(){try{const raw=localStorage.getItem(STORAGE_KEY); if(!raw) return; const data=JSON.parse(raw); if(typeof data.search==='string') els.searchInput.value=data.search; if(typeof data.status==='string') els.statusFilter.value=data.status; if(typeof data.match==='string') els.matchFilter.value=data.match; if(typeof data.sortMode==='string') els.sortMode.value=data.sortMode; els.hideUnknownChk.checked=!!data.hideUnknown; els.sortUnknownBottomChk.checked=data.sortUnknownBottom!==false; if(data.columns && typeof data.columns==='object'){for(const key of Object.keys(columnState)){ if(key in data.columns) columnState[key]=!!data.columns[key]; }} if(Array.isArray(data.nodeOrder) && data.nodeOrder.length){customNodeOrder=normalizeNodeOrder(data.nodeOrder);} }catch(e){console.warn(e);} }
+function resetViewState(){localStorage.removeItem(STORAGE_KEY); columnState=Object.fromEntries(COLUMNS.map(c=>[c.key,c.visible])); customNodeOrder=[...DEFAULT_ORDER]; els.searchInput.value=''; els.statusFilter.value='all'; els.matchFilter.value='all'; els.sortMode.value='custom'; els.hideUnknownChk.checked=false; els.sortUnknownBottomChk.checked=true; renderColumnControls(); renderOrderEditor(); applyFilters(); els.saveStateText.textContent='Visning nullstilt';}
+function normalizeNodeOrder(order){const seen=new Set(); const out=[]; for(const n of order){ if(n && !seen.has(n)){ out.push(n); seen.add(n);} } for(const def of DEFAULT_ORDER){ if(!seen.has(def)){ out.push(def); seen.add(def);} } return out;}
+function orderIndex(name){const idx=customNodeOrder.indexOf(name); return idx===-1 ? 9999 : idx;}
+
 function getVisibleColumns(){return COLUMNS.filter(c=>columnState[c.key]);}
-function renderColumnControls(){els.columnToggles.innerHTML=COLUMNS.map(c=>`<label class="check"><input type="checkbox" data-col="${c.key}" ${columnState[c.key]?'checked':''}/> ${c.label}</label>`).join('');els.columnToggles.querySelectorAll('input[type="checkbox"]').forEach(chk=>chk.addEventListener('change',e=>{columnState[e.target.dataset.col]=e.target.checked; renderTable(currentRows);}));}
+function renderColumnControls(){els.columnToggles.innerHTML=COLUMNS.map(c=>`<label class="check"><input type="checkbox" data-col="${c.key}" ${columnState[c.key]?'checked':''}/> ${c.label}</label>`).join(''); els.columnToggles.querySelectorAll('input[type="checkbox"]').forEach(chk=>chk.addEventListener('change',e=>{columnState[e.target.dataset.col]=e.target.checked; saveViewState(); renderTable(currentRows);}));}
 function renderHeader(){const cols=getVisibleColumns(); els.theadRow.innerHTML=cols.map(c=>`<th>${escapeHtml(c.label)}</th>`).join('');}
-function cellHtml(row,key){
-  if(key==='status') return `<span class="badge ${row.nodeName!=='Ukjent'?'ok':'warn'}">${row.nodeName!=='Ukjent'?'Matchet':'Ukjent'}</span>`;
-  if(key==='kwh') return row.kwh!=null?formatNo(row.kwh,2,'kWh'):'';
-  if(key==='totalInc') return row.totalInc!=null?formatNo(row.totalInc,2,'kr'):'';
-  if(key==='totalEx') return row.totalEx!=null?formatNo(row.totalEx,2,'kr'):'';
-  return escapeHtml(row[key] ?? '');
-}
+function cellHtml(row,key){ if(key==='status') return `<span class="badge ${row.nodeName!=='Ukjent'?'ok':'warn'}">${row.nodeName!=='Ukjent'?'Matchet':'Ukjent'}</span>`; if(key==='kwh') return row.kwh!=null?formatNo(row.kwh,2,'kWh'):''; if(key==='totalInc') return row.totalInc!=null?formatNo(row.totalInc,2,'kr'):''; if(key==='totalEx') return row.totalEx!=null?formatNo(row.totalEx,2,'kr'):''; return escapeHtml(row[key] ?? ''); }
 function renderTable(rows){renderHeader(); currentRows=rows; const cols=getVisibleColumns(); if(!rows.length){els.resultBody.innerHTML=`<tr><td colspan="${Math.max(cols.length,1)}" class="wraptext muted">Ingen data å vise.</td></tr>`; updateStats([]); els.csvBtn.disabled=true; els.copyBtn.disabled=true; return;} els.resultBody.innerHTML=rows.map(r=>`<tr>${cols.map(c=>`<td class="${c.key==='addressFound'?'wraptext':''}">${cellHtml(r,c.key)}</td>`).join('')}</tr>`).join(''); updateStats(rows); els.csvBtn.disabled=false; els.copyBtn.disabled=false;}
-function applyFilters(){
-  let rows=[...rawRows];
-  const query=els.searchInput.value.trim().toLowerCase();
-  const status=els.statusFilter.value;
-  const matchFilter=els.matchFilter.value;
-  const hideUnknown=els.hideUnknownChk.checked;
-  const unknownBottom=els.sortUnknownBottomChk.checked;
-  if(hideUnknown) rows=rows.filter(r=>r.nodeName!=='Ukjent');
-  if(status==='matched') rows=rows.filter(r=>r.nodeName!=='Ukjent');
-  if(status==='unknown') rows=rows.filter(r=>r.nodeName==='Ukjent');
-  if(matchFilter!=='all') rows=rows.filter(r=>(r.matchReason||'')===matchFilter);
-  if(query){ rows=rows.filter(r=>[r.nodeName,r.addressFound,r.meter,r.mpid,r.matchReason,String(r.pageNum||'')].join(' ').toLowerCase().includes(query)); }
-  rows.sort((a,b)=>{
-    if(unknownBottom){
-      if(a.nodeName==='Ukjent' && b.nodeName!=='Ukjent') return 1;
-      if(a.nodeName!=='Ukjent' && b.nodeName==='Ukjent') return -1;
-    }
-    return String(a.nodeName||'').localeCompare(String(b.nodeName||''),'no');
-  });
-  renderTable(rows);
-}
-function updateStats(rows){els.statCount.textContent=String(rows.length);els.statKwh.textContent=formatNo(rows.reduce((a,b)=>a+(b.kwh||0),0),2,'kWh');els.statInc.textContent=formatNo(rows.reduce((a,b)=>a+(b.totalInc||0),0),2,'kr');els.statEx.textContent=formatNo(rows.reduce((a,b)=>a+(b.totalEx||0),0),2,'kr')}
-async function processFile(file){resetLog(); rawRows=[]; renderTable([]); if(!file)return; log(`Starter analyse av ${file.name}`); try{const pages=await extractTextFromPdf(file); const extracted=[]; for(const p of pages){const row=extractPageData(p.text,p.pageNum); const hasInteresting=row.kwh!=null||row.totalInc!=null||row.totalEx!=null||row.addressFound||row.meter||row.mpid; if(!hasInteresting) continue; const match=matchNode(row); extracted.push({...row,nodeName:match.nodeName,matchReason:match.reason}); }
-  log(`Fant ${extracted.length} råtreff i dokumentet.`); rawRows=pickBest(extracted).filter(r=>r.kwh!=null||r.totalInc!=null||r.totalEx!=null); applyFilters(); log(`Viser ${currentRows.length} rader etter filtrering.`);}catch(err){console.error(err); log(err.message||String(err),'error'); els.resultBody.innerHTML=`<tr><td colspan="${getVisibleColumns().length}" class="wraptext">Feil ved parsing: ${escapeHtml(err.message||String(err))}</td></tr>`;}}
+
+function sortRows(rows){const sortMode=els.sortMode.value; const unknownBottom=els.sortUnknownBottomChk.checked; rows.sort((a,b)=>{
+  if(unknownBottom){ if(a.nodeName==='Ukjent' && b.nodeName!=='Ukjent') return 1; if(a.nodeName!=='Ukjent' && b.nodeName==='Ukjent') return -1; }
+  switch(sortMode){
+    case 'node_asc': return String(a.nodeName||'').localeCompare(String(b.nodeName||''),'no');
+    case 'node_desc': return String(b.nodeName||'').localeCompare(String(a.nodeName||''),'no');
+    case 'kwh_desc': return (b.kwh??-1)-(a.kwh??-1) || String(a.nodeName||'').localeCompare(String(b.nodeName||''),'no');
+    case 'kwh_asc': return (a.kwh??999999999)-(b.kwh??999999999) || String(a.nodeName||'').localeCompare(String(b.nodeName||''),'no');
+    case 'sum_desc': return (b.totalInc??-1)-(a.totalInc??-1) || String(a.nodeName||'').localeCompare(String(b.nodeName||''),'no');
+    case 'sum_asc': return (a.totalInc??999999999)-(b.totalInc??999999999) || String(a.nodeName||'').localeCompare(String(b.nodeName||''),'no');
+    case 'page_asc': return (a.pageNum??9999)-(b.pageNum??9999) || String(a.nodeName||'').localeCompare(String(b.nodeName||''),'no');
+    case 'custom':
+    default:
+      return orderIndex(a.nodeName)-orderIndex(b.nodeName) || String(a.nodeName||'').localeCompare(String(b.nodeName||''),'no');
+  }
+});
+ return rows;}
+function applyFilters(){let rows=[...rawRows]; const query=els.searchInput.value.trim().toLowerCase(); const status=els.statusFilter.value; const matchFilter=els.matchFilter.value; const hideUnknown=els.hideUnknownChk.checked; if(hideUnknown) rows=rows.filter(r=>r.nodeName!=='Ukjent'); if(status==='matched') rows=rows.filter(r=>r.nodeName!=='Ukjent'); if(status==='unknown') rows=rows.filter(r=>r.nodeName==='Ukjent'); if(matchFilter!=='all') rows=rows.filter(r=>(r.matchReason||'')===matchFilter); if(query){ rows=rows.filter(r=>[r.nodeName,r.addressFound,r.meter,r.mpid,r.matchReason,String(r.pageNum||'')].join(' ').toLowerCase().includes(query)); } sortRows(rows); renderTable(rows); saveViewState(); renderOrderEditor();}
+function updateStats(rows){els.statCount.textContent=String(rows.length); els.statKwh.textContent=formatNo(rows.reduce((a,b)=>a+(b.kwh||0),0),2,'kWh'); els.statInc.textContent=formatNo(rows.reduce((a,b)=>a+(b.totalInc||0),0),2,'kr'); els.statEx.textContent=formatNo(rows.reduce((a,b)=>a+(b.totalEx||0),0),2,'kr')}
+
+function uniqueMatchedNodes(){const names=[...new Set(rawRows.filter(r=>r.nodeName && r.nodeName!=='Ukjent').map(r=>r.nodeName))]; const merged=normalizeNodeOrder([...customNodeOrder, ...names]); return merged.filter(n=>names.includes(n) || DEFAULT_ORDER.includes(n));}
+function moveInArray(arr,from,to){if(to<0||to>=arr.length) return arr; const copy=[...arr]; const [item]=copy.splice(from,1); copy.splice(to,0,item); return copy;}
+function renderOrderEditor(){const nodes=uniqueMatchedNodes(); els.orderList.innerHTML=nodes.map((name,i)=>`<div class="order-item"><div><strong>${escapeHtml(name)}</strong></div><div class="order-actions"><button type="button" class="ghost" data-up="${i}">▲</button><button type="button" class="ghost" data-down="${i}">▼</button></div></div>`).join(''); els.orderList.querySelectorAll('[data-up]').forEach(btn=>btn.addEventListener('click',e=>{const i=Number(e.currentTarget.dataset.up); customNodeOrder=moveInArray(nodes,i,i-1); customNodeOrder=normalizeNodeOrder(customNodeOrder); renderOrderEditor(); applyFilters();})); els.orderList.querySelectorAll('[data-down]').forEach(btn=>btn.addEventListener('click',e=>{const i=Number(e.currentTarget.dataset.down); customNodeOrder=moveInArray(nodes,i,i+1); customNodeOrder=normalizeNodeOrder(customNodeOrder); renderOrderEditor(); applyFilters();}));}
+function openOrderModal(){renderOrderEditor(); els.orderModalBackdrop.classList.add('show');}
+function closeOrderModal(){els.orderModalBackdrop.classList.remove('show'); saveViewState();}
+
+async function processFile(file){resetLog(); rawRows=[]; renderTable([]); if(!file) return; log(`Starter analyse av ${file.name}`); try{const pages=await extractTextFromPdf(file); const extracted=[]; for(const p of pages){const row=extractPageData(p.text,p.pageNum); const hasInteresting=row.kwh!=null||row.totalInc!=null||row.totalEx!=null||row.addressFound||row.meter||row.mpid; if(!hasInteresting) continue; const match=matchNode(row); extracted.push({...row,nodeName:match.nodeName,matchReason:match.reason}); }
+  log(`Fant ${extracted.length} råtreff i dokumentet.`); rawRows=pickBest(extracted).filter(r=>r.kwh!=null||r.totalInc!=null||r.totalEx!=null); customNodeOrder=normalizeNodeOrder([...customNodeOrder, ...rawRows.map(r=>r.nodeName).filter(Boolean)]); applyFilters(); log(`Viser ${currentRows.length} rader etter filtrering.`);}catch(err){console.error(err); log(err.message||String(err),'error'); els.resultBody.innerHTML=`<tr><td colspan="${getVisibleColumns().length}" class="wraptext">Feil ved parsing: ${escapeHtml(err.message||String(err))}</td></tr>`;}}
 function exportCsv(){if(!currentRows.length)return; const cols=getVisibleColumns(); const headers=cols.map(c=>c.label); const lines=[headers.join(';')]; for(const r of currentRows){ const vals=cols.map(c=>{ let v=''; if(c.key==='status') v=r.nodeName!=='Ukjent'?'Matchet':'Ukjent'; else if(c.key==='kwh') v=r.kwh!=null?String(r.kwh).replace('.',','):''; else if(c.key==='totalInc') v=r.totalInc!=null?String(r.totalInc).replace('.',','):''; else if(c.key==='totalEx') v=r.totalEx!=null?String(r.totalEx).replace('.',','):''; else v=r[c.key] ?? ''; return `"${String(v).replaceAll('"','""')}"`; }); lines.push(vals.join(';')); } const blob=new Blob(['\ufeff'+lines.join('\n')],{type:'text/csv;charset=utf-8;'}); const a=document.createElement('a'); const url=URL.createObjectURL(blob); a.href=url; a.download='faktura_noder.csv'; document.body.appendChild(a); a.click(); a.remove(); URL.revokeObjectURL(url); log('CSV eksportert.'); }
 async function copyTable(){if(!currentRows.length)return; const cols=getVisibleColumns(); const headers=cols.map(c=>c.label); const lines=[headers.join('\t')]; for(const r of currentRows){ lines.push(cols.map(c=>{ if(c.key==='status') return r.nodeName!=='Ukjent'?'Matchet':'Ukjent'; if(c.key==='kwh') return r.kwh!=null?formatNo(r.kwh,2):''; if(c.key==='totalInc') return r.totalInc!=null?formatNo(r.totalInc,2):''; if(c.key==='totalEx') return r.totalEx!=null?formatNo(r.totalEx,2):''; return String(r[c.key] ?? ''); }).join('\t')); } try{await navigator.clipboard.writeText(lines.join('\n')); log('Tabellen er kopiert til utklippstavlen.');}catch{log('Klarte ikke å kopiere til utklippstavlen.','warn');}}
-function loadSample(){resetLog(); rawRows=[{nodeName:'Bugården',addressFound:'TENNISVEIEN 19',kwh:3688.56,totalInc:6948.13,totalEx:5558.50,meter:'7359992897199153',mpid:'707057500041931319',matchReason:'Målernummer',pageNum:43},{nodeName:'Enga',addressFound:'Enga 7',kwh:3003.41,totalInc:5579.73,totalEx:4463.77,meter:'7359992902210538',mpid:'707057500041899633',matchReason:'Målepunkt-ID',pageNum:31},{nodeName:'Ukjent',addressFound:'',kwh:null,totalInc:68479.33,totalEx:54783.42,meter:'',mpid:'',matchReason:'Ingen match',pageNum:1}]; applyFilters(); log('Testvisning lastet.');}
+function loadSample(){resetLog(); rawRows=[{nodeName:'Bugården',addressFound:'TENNISVEIEN 19',kwh:3688.56,totalInc:6948.13,totalEx:5558.50,meter:'7359992897199153',mpid:'707057500041931319',matchReason:'Målernummer',pageNum:43},{nodeName:'Enga',addressFound:'Enga 7',kwh:3003.41,totalInc:5579.73,totalEx:4463.77,meter:'7359992902210538',mpid:'707057500041899633',matchReason:'Målepunkt-ID',pageNum:31},{nodeName:'Hunsrød',addressFound:'SØNDRE KULLERØD',kwh:2563.13,totalInc:4827.92,totalEx:3862.34,meter:'7359992894094475',mpid:'',matchReason:'Målernummer',pageNum:7},{nodeName:'Ukjent',addressFound:'',kwh:null,totalInc:68479.33,totalEx:54783.42,meter:'',mpid:'',matchReason:'Ingen match',pageNum:1}]; customNodeOrder=normalizeNodeOrder([...customNodeOrder, ...rawRows.map(r=>r.nodeName).filter(Boolean)]); applyFilters(); log('Testvisning lastet.');}
 
 els.pickBtn.addEventListener('click',()=>els.fileInput.click());
 els.fileInput.addEventListener('change',e=>processFile(e.target.files[0]));
 els.sampleBtn.addEventListener('click',loadSample);
 els.clearBtn.addEventListener('click',()=>{els.fileInput.value=''; resetLog(); rawRows=[]; applyFilters();});
+els.resetViewBtn.addEventListener('click',resetViewState);
 els.csvBtn.addEventListener('click',exportCsv);
 els.copyBtn.addEventListener('click',copyTable);
-els.searchInput.addEventListener('input',applyFilters);
-els.statusFilter.addEventListener('change',applyFilters);
-els.matchFilter.addEventListener('change',applyFilters);
+[els.searchInput, els.statusFilter, els.matchFilter, els.sortMode].forEach(el=>el.addEventListener('input',applyFilters));
 els.hideUnknownChk.addEventListener('change',applyFilters);
 els.sortUnknownBottomChk.addEventListener('change',applyFilters);
+els.editOrderBtn.addEventListener('click',openOrderModal);
+els.closeOrderBtn.addEventListener('click',closeOrderModal);
+els.resetOrderBtn.addEventListener('click',()=>{customNodeOrder=[...DEFAULT_ORDER]; renderOrderEditor(); applyFilters();});
+els.orderModalBackdrop.addEventListener('click',e=>{if(e.target===els.orderModalBackdrop) closeOrderModal();});
 ['dragenter','dragover'].forEach(evt=>els.dropzone.addEventListener(evt,e=>{e.preventDefault(); e.stopPropagation(); els.dropzone.classList.add('dragover')}));
 ['dragleave','drop'].forEach(evt=>els.dropzone.addEventListener(evt,e=>{e.preventDefault(); e.stopPropagation(); els.dropzone.classList.remove('dragover')}));
 els.dropzone.addEventListener('drop',e=>{const file=e.dataTransfer.files?.[0]; if(file) processFile(file);});
-renderColumnControls(); renderHeader();
+
+loadViewState(); renderColumnControls(); renderHeader(); renderOrderEditor(); applyFilters();
 </script>
 </body>
 </html>
