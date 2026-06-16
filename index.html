@@ -3,15 +3,56 @@
 <head>
   <meta charset="UTF-8" />
   <meta name="viewport" content="width=device-width, initial-scale=1.0" />
-  <title>Strømforbruk</title>
+  <title>PDF-faktura parser – filter og kolonnevalg</title>
   <style>
     :root{--bg:#0b1220;--panel:#111a2b;--border:#23324d;--text:#e8eef9;--muted:#9fb0d1;--accent:#4f8cff;--ok:#10b981;--warn:#f59e0b;--shadow:0 12px 28px rgba(0,0,0,.28);--radius:18px}
-    *{box-sizing:border-box} body{margin:0;font-family:Inter,Segoe UI,Roboto,Arial,sans-serif;background:linear-gradient(180deg,#08101c 0%,#0b1220 100%);color:var(--text)}
-    .wrap{max-width:1280px;margin:0 auto;padding:20px}.hero{display:grid;gap:14px;grid-template-columns:1.2fr .8fr;align-items:stretch;margin-bottom:20px}.card{background:linear-gradient(180deg,rgba(255,255,255,.02),rgba(255,255,255,.01));border:1px solid var(--border);border-radius:var(--radius);box-shadow:var(--shadow);overflow:hidden}.card-body{padding:18px}
-    .title{font-size:27px;line-height:1.15;margin:0 0 8px}.subtitle,.help,.footer-note,.muted{color:var(--muted);line-height:1.6}.dropzone{position:relative;border:2px dashed #31518d;border-radius:18px;background:radial-gradient(circle at top left,rgba(79,140,255,.15),rgba(79,140,255,.04));min-height:220px;display:flex;flex-direction:column;align-items:center;justify-content:center;text-align:center;gap:10px;transition:.2s ease;padding:20px;cursor:pointer}.dropzone.dragover{border-color:#72a1ff;background:radial-gradient(circle at top left,rgba(79,140,255,.22),rgba(79,140,255,.07))}.drop-icon{width:64px;height:64px;border-radius:18px;display:grid;place-items:center;background:rgba(255,255,255,.06);border:1px solid rgba(255,255,255,.08);font-size:32px}.drop-title{font-size:22px;font-weight:700}.drop-text{color:var(--muted);max-width:560px}
-    .btns{display:flex;flex-wrap:wrap;gap:10px;margin-top:12px} button{background:#1a2740;color:var(--text);border:1px solid #2b3c5d;height:42px;border-radius:12px;padding:0 14px;font-weight:600;cursor:pointer} button.primary{background:linear-gradient(180deg,#4183ff,#2e69e6);border-color:#528eff} button.good{background:linear-gradient(180deg,#11b884,#09986d);border-color:#22c896} button.ghost{background:rgba(255,255,255,.04)} button:disabled{opacity:.55;cursor:not-allowed}
-    .grid{display:grid;grid-template-columns:repeat(4,1fr);gap:14px;margin-bottom:18px}.stat{background:linear-gradient(180deg,rgba(255,255,255,.03),rgba(255,255,255,.01));border:1px solid var(--border);border-radius:16px;padding:16px}.stat-label{color:var(--muted);font-size:13px}.stat-value{font-size:27px;font-weight:800;margin-top:8px}.section-title{padding:16px 18px;border-bottom:1px solid var(--border);display:flex;align-items:center;justify-content:space-between;gap:10px;flex-wrap:wrap}.section-title h2{margin:0;font-size:18px}.table-wrap{width:100%;overflow:auto} table{width:100%;border-collapse:collapse;min-width:1040px} th,td{padding:12px 14px;border-bottom:1px solid rgba(255,255,255,.06);text-align:left;vertical-align:top;white-space:nowrap} th{position:sticky;top:0;z-index:1;background:#111a2b;color:#c8d6f1;font-size:13px} td.wraptext{white-space:normal}.badge{display:inline-flex;align-items:center;gap:6px;padding:5px 10px;border-radius:999px;font-size:12px;font-weight:700;border:1px solid rgba(255,255,255,.1);background:rgba(255,255,255,.04)} .badge.ok{color:#cdfce8;background:rgba(16,185,129,.14);border-color:rgba(16,185,129,.35)} .badge.warn{color:#ffe2ad;background:rgba(245,158,11,.14);border-color:rgba(245,158,11,.35)} .log{font-family:ui-monospace,SFMono-Regular,Menlo,Consolas,monospace;font-size:13px;line-height:1.55;background:#0a1020;color:#dce8ff;min-height:110px;max-height:220px;overflow:auto;padding:14px;white-space:pre-wrap} input[type=file]{display:none}.footer-note{font-size:13px;padding:14px 18px 18px;border-top:1px solid rgba(255,255,255,.06)} code{background:rgba(255,255,255,.06);padding:.1rem .35rem;border-radius:6px}
-    @media (max-width:980px){.hero{grid-template-columns:1fr}.grid{grid-template-columns:repeat(2,1fr)}} @media (max-width:640px){.wrap{padding:14px}.grid{grid-template-columns:1fr}.title{font-size:24px}.drop-title{font-size:20px}}
+    *{box-sizing:border-box}
+    body{margin:0;font-family:Inter,Segoe UI,Roboto,Arial,sans-serif;background:linear-gradient(180deg,#08101c 0%,#0b1220 100%);color:var(--text)}
+    .wrap{max-width:1360px;margin:0 auto;padding:20px}
+    .hero{display:grid;gap:14px;grid-template-columns:1.2fr .8fr;align-items:stretch;margin-bottom:20px}
+    .card{background:linear-gradient(180deg,rgba(255,255,255,.02),rgba(255,255,255,.01));border:1px solid var(--border);border-radius:var(--radius);box-shadow:var(--shadow);overflow:hidden}
+    .card-body{padding:18px}
+    .title{font-size:27px;line-height:1.15;margin:0 0 8px}
+    .subtitle,.help,.footer-note,.muted{color:var(--muted);line-height:1.6}
+    .dropzone{position:relative;border:2px dashed #31518d;border-radius:18px;background:radial-gradient(circle at top left,rgba(79,140,255,.15),rgba(79,140,255,.04));min-height:220px;display:flex;flex-direction:column;align-items:center;justify-content:center;text-align:center;gap:10px;transition:.2s ease;padding:20px;cursor:pointer}
+    .dropzone.dragover{border-color:#72a1ff;background:radial-gradient(circle at top left,rgba(79,140,255,.22),rgba(79,140,255,.07))}
+    .drop-icon{width:64px;height:64px;border-radius:18px;display:grid;place-items:center;background:rgba(255,255,255,.06);border:1px solid rgba(255,255,255,.08);font-size:32px}
+    .drop-title{font-size:22px;font-weight:700}.drop-text{color:var(--muted);max-width:560px}
+    .btns{display:flex;flex-wrap:wrap;gap:10px;margin-top:12px}
+    button,input,select{font:inherit}
+    button{background:#1a2740;color:var(--text);border:1px solid #2b3c5d;height:42px;border-radius:12px;padding:0 14px;font-weight:600;cursor:pointer}
+    button.primary{background:linear-gradient(180deg,#4183ff,#2e69e6);border-color:#528eff}
+    button.good{background:linear-gradient(180deg,#11b884,#09986d);border-color:#22c896}
+    button.ghost{background:rgba(255,255,255,.04)}
+    button:disabled{opacity:.55;cursor:not-allowed}
+    .grid{display:grid;grid-template-columns:repeat(4,1fr);gap:14px;margin-bottom:18px}
+    .stat{background:linear-gradient(180deg,rgba(255,255,255,.03),rgba(255,255,255,.01));border:1px solid var(--border);border-radius:16px;padding:16px}
+    .stat-label{color:var(--muted);font-size:13px}.stat-value{font-size:27px;font-weight:800;margin-top:8px}
+    .section-title{padding:16px 18px;border-bottom:1px solid var(--border);display:flex;align-items:center;justify-content:space-between;gap:10px;flex-wrap:wrap}.section-title h2{margin:0;font-size:18px}
+    .table-wrap{width:100%;overflow:auto}
+    table{width:100%;border-collapse:collapse;min-width:1080px}
+    th,td{padding:12px 14px;border-bottom:1px solid rgba(255,255,255,.06);text-align:left;vertical-align:top;white-space:nowrap}
+    th{position:sticky;top:0;z-index:1;background:#111a2b;color:#c8d6f1;font-size:13px}
+    td.wraptext{white-space:normal}
+    .badge{display:inline-flex;align-items:center;gap:6px;padding:5px 10px;border-radius:999px;font-size:12px;font-weight:700;border:1px solid rgba(255,255,255,.1);background:rgba(255,255,255,.04)}
+    .badge.ok{color:#cdfce8;background:rgba(16,185,129,.14);border-color:rgba(16,185,129,.35)}
+    .badge.warn{color:#ffe2ad;background:rgba(245,158,11,.14);border-color:rgba(245,158,11,.35)}
+    .log{font-family:ui-monospace,SFMono-Regular,Menlo,Consolas,monospace;font-size:13px;line-height:1.55;background:#0a1020;color:#dce8ff;min-height:110px;max-height:220px;overflow:auto;padding:14px;white-space:pre-wrap}
+    input[type=file]{display:none}
+    .footer-note{font-size:13px;padding:14px 18px 18px;border-top:1px solid rgba(255,255,255,.06)}
+    code{background:rgba(255,255,255,.06);padding:.1rem .35rem;border-radius:6px}
+    .filters{display:grid;grid-template-columns:1.2fr .8fr;gap:14px}
+    .filter-grid{display:grid;grid-template-columns:repeat(3, minmax(180px,1fr));gap:12px}
+    .field{display:flex;flex-direction:column;gap:6px}
+    .field label{font-size:13px;color:var(--muted)}
+    .field input[type=text], .field select{height:42px;border-radius:12px;border:1px solid #2b3c5d;background:#0f1930;color:var(--text);padding:0 12px}
+    .check-row{display:flex;flex-wrap:wrap;gap:14px;align-items:center}
+    .check{display:flex;align-items:center;gap:8px;color:var(--text)}
+    .check input{accent-color:#4f8cff}
+    .column-list{display:grid;grid-template-columns:repeat(3,minmax(140px,1fr));gap:10px}
+    @media (max-width:1100px){.filters{grid-template-columns:1fr}.filter-grid{grid-template-columns:1fr 1fr}.column-list{grid-template-columns:repeat(2,minmax(140px,1fr))}}
+    @media (max-width:980px){.hero{grid-template-columns:1fr}.grid{grid-template-columns:repeat(2,1fr)}}
+    @media (max-width:640px){.wrap{padding:14px}.grid,.filter-grid,.column-list{grid-template-columns:1fr}.title{font-size:24px}.drop-title{font-size:20px}}
   </style>
 </head>
 <body>
@@ -19,13 +60,13 @@
   <div class="hero">
     <div class="card"><div class="card-body">
       <h1 class="title">PDF-faktura parser for noderom</h1>
-      <p class="subtitle">Oppdatert versjon med <strong>KWh-fiks</strong>. Siden prøver først lokale filer (<code>pdf.min.js</code> / <code>pdf.worker.min.js</code>) og deretter CDN automatisk.</p>
+      <p class="subtitle">Oppdatert versjon med <strong>KWh-fiks</strong>, <strong>filter</strong>, <strong>kolonnevalg</strong> og automatisk sortering der <strong>Ukjent</strong> alltid legger seg nederst.</p>
       <div class="btns">
         <button id="pickBtn" class="primary">Velg PDF</button>
         <button id="sampleBtn" class="ghost">Last testvisning</button>
         <button id="clearBtn" class="ghost">Nullstill</button>
       </div>
-      <div class="help" style="margin-top:14px"><strong>Endret:</strong> KWh hentes nå mer presist fra <code>Spot Bedrift</code>-linjen og faller tilbake til målerlinjen hvis nødvendig.</div>
+      <div class="help" style="margin-top:14px"><strong>Nytt:</strong> Du kan nå skjule <code>Ukjent</code>, filtrere på status/søk, og velge hvilke kolonner som skal vises.</div>
     </div></div>
     <label class="dropzone card" id="dropzone" for="fileInput">
       <div class="drop-icon">📄</div>
@@ -34,23 +75,82 @@
       <input id="fileInput" type="file" accept="application/pdf" />
     </label>
   </div>
+
   <div class="grid">
-    <div class="stat card"><div class="stat-label">Antall treff</div><div class="stat-value" id="statCount">0</div></div>
+    <div class="stat card"><div class="stat-label">Antall viste rader</div><div class="stat-value" id="statCount">0</div></div>
     <div class="stat card"><div class="stat-label">Totalt forbruk</div><div class="stat-value" id="statKwh">0 kWh</div></div>
     <div class="stat card"><div class="stat-label">Sum inkl. mva.</div><div class="stat-value" id="statInc">0 kr</div></div>
     <div class="stat card"><div class="stat-label">Sum ekskl. mva.</div><div class="stat-value" id="statEx">0 kr</div></div>
   </div>
+
+  <div class="card" style="margin-bottom:18px;">
+    <div class="section-title"><h2>Filter og visning</h2></div>
+    <div class="card-body filters">
+      <div>
+        <div class="filter-grid">
+          <div class="field">
+            <label for="searchInput">Søk</label>
+            <input id="searchInput" type="text" placeholder="Søk i node, adresse, målernummer ..." />
+          </div>
+          <div class="field">
+            <label for="statusFilter">Statusfilter</label>
+            <select id="statusFilter">
+              <option value="all">Alle</option>
+              <option value="matched">Kun matchede</option>
+              <option value="unknown">Kun ukjente</option>
+            </select>
+          </div>
+          <div class="field">
+            <label for="matchFilter">Matchgrunnlag</label>
+            <select id="matchFilter">
+              <option value="all">Alle</option>
+              <option value="Målernummer">Målernummer</option>
+              <option value="Målepunkt-ID">Målepunkt-ID</option>
+              <option value="Adresse">Adresse</option>
+              <option value="Ingen match">Ingen match</option>
+            </select>
+          </div>
+        </div>
+        <div class="check-row" style="margin-top:12px">
+          <label class="check"><input type="checkbox" id="hideUnknownChk" /> Skjul ukjente</label>
+          <label class="check"><input type="checkbox" id="sortUnknownBottomChk" checked /> Legg ukjente nederst</label>
+        </div>
+      </div>
+
+      <div>
+        <div class="help" style="margin-bottom:10px"><strong>Skjul / vis kolonner</strong></div>
+        <div class="column-list" id="columnToggles"></div>
+      </div>
+    </div>
+  </div>
+
   <div class="card" style="margin-bottom:18px;">
     <div class="section-title"><h2>Resultater</h2><div class="btns" style="margin-top:0"><button id="csvBtn" class="good" disabled>Eksporter CSV</button><button id="copyBtn" class="ghost" disabled>Kopier tabell</button></div></div>
-    <div class="table-wrap"><table><thead><tr><th>Status</th><th>Node</th><th>Adresse (funnet)</th><th>KWh</th><th>Sum inkl. mva.</th><th>Sum ekskl. mva.</th><th>Målernummer</th><th>Målepunkt-ID</th><th>Matchgrunnlag</th><th>Side</th></tr></thead><tbody id="resultBody"><tr><td colspan="10" class="wraptext muted">Ingen data enda. Dra inn en PDF for å starte.</td></tr></tbody></table></div>
-    <div class="footer-note">Hvis du fortsatt er på jobbnett og CDN er blokkert, legg <code>pdf.min.js</code> og <code>pdf.worker.min.js</code> i samme mappe som <code>index.html</code>.</div>
+    <div class="table-wrap"><table><thead><tr id="theadRow"></tr></thead><tbody id="resultBody"><tr><td colspan="10" class="wraptext muted">Ingen data enda. Dra inn en PDF for å starte.</td></tr></tbody></table></div>
+    <div class="footer-note">Hvis du er på jobbnett og CDN er blokkert, legg <code>pdf.min.js</code> og <code>pdf.worker.min.js</code> i samme mappe som <code>index.html</code>.</div>
   </div>
+
   <div class="card"><div class="section-title"><h2>Logg</h2></div><div class="log" id="log">Klar.</div></div>
 </div>
 <script>
 const NODES=[{name:'Bugården',address:'Tennisveien 19',lookupId:'7359992897199153'},{name:'Enga',address:'Enga 7',lookupId:'707057500041899633'},{name:'Framnes',address:'Lyhmannsvei',lookupId:'7359992927470023'},{name:'Gjekstad',address:'Nordre Gjekstadskog',lookupId:'7359992900456587'},{name:'Hunsrød',address:'Sønder Kullerød',lookupId:'7359992894094475'},{name:'Hvalmus',address:'Museumsgata 39',lookupId:'707057500042332375'},{name:'Kilen',address:'Hegnasletta 9',lookupId:'7359992895276245'},{name:'Klavnes',address:'Galsrødveien 20',lookupId:'707057500042358801'},{name:'Krokenskogen',address:'Laurasvei 5',lookupId:'7359992899166894'},{name:'Krokemoa',address:'Krokmoveien',lookupId:'7359992925909440'},{name:'Nygaard',address:'Feltspatveien 14',lookupId:'7359992891316730'},{name:'Solløkka',address:'Årøveien 80',lookupId:'707057500041964201'},{name:'Store Bergan',address:'Haneholmveien 170',lookupId:'7359992895291842'},{name:'Strandskog',address:'Østerøyveien 214',lookupId:'7359992909921154'},{name:'Varden',address:'Vardeveien 52',lookupId:'7359992903905136'},{name:'Vesterøya',address:'Vertøyveien 255',lookupId:'7359992900839304'}];
-const els={fileInput:document.getElementById('fileInput'),pickBtn:document.getElementById('pickBtn'),sampleBtn:document.getElementById('sampleBtn'),clearBtn:document.getElementById('clearBtn'),dropzone:document.getElementById('dropzone'),log:document.getElementById('log'),resultBody:document.getElementById('resultBody'),csvBtn:document.getElementById('csvBtn'),copyBtn:document.getElementById('copyBtn'),statCount:document.getElementById('statCount'),statKwh:document.getElementById('statKwh'),statInc:document.getElementById('statInc'),statEx:document.getElementById('statEx')};
+const COLUMNS=[
+  {key:'status',label:'Status',visible:true},
+  {key:'nodeName',label:'Node',visible:true},
+  {key:'addressFound',label:'Adresse (funnet)',visible:true},
+  {key:'kwh',label:'KWh',visible:true},
+  {key:'totalInc',label:'Sum inkl. mva.',visible:true},
+  {key:'totalEx',label:'Sum ekskl. mva.',visible:true},
+  {key:'meter',label:'Målernummer',visible:true},
+  {key:'mpid',label:'Målepunkt-ID',visible:true},
+  {key:'matchReason',label:'Matchgrunnlag',visible:true},
+  {key:'pageNum',label:'Side',visible:true}
+];
+const els={fileInput:document.getElementById('fileInput'),pickBtn:document.getElementById('pickBtn'),sampleBtn:document.getElementById('sampleBtn'),clearBtn:document.getElementById('clearBtn'),dropzone:document.getElementById('dropzone'),log:document.getElementById('log'),resultBody:document.getElementById('resultBody'),csvBtn:document.getElementById('csvBtn'),copyBtn:document.getElementById('copyBtn'),statCount:document.getElementById('statCount'),statKwh:document.getElementById('statKwh'),statInc:document.getElementById('statInc'),statEx:document.getElementById('statEx'),searchInput:document.getElementById('searchInput'),statusFilter:document.getElementById('statusFilter'),matchFilter:document.getElementById('matchFilter'),hideUnknownChk:document.getElementById('hideUnknownChk'),sortUnknownBottomChk:document.getElementById('sortUnknownBottomChk'),columnToggles:document.getElementById('columnToggles'),theadRow:document.getElementById('theadRow')};
+let rawRows=[];
 let currentRows=[];
+let columnState=Object.fromEntries(COLUMNS.map(c=>[c.key,c.visible]));
+
 function log(msg,type='info'){const ts=new Date().toLocaleTimeString('no-NO');const p=type==='error'?'FEIL':type==='warn'?'ADVARSEL':'INFO';els.log.textContent+=`\n[${ts}] ${p}: ${msg}`;els.log.scrollTop=els.log.scrollHeight}
 function resetLog(){els.log.textContent='Klar.'}
 function escapeHtml(s){return String(s??'').replaceAll('&','&amp;').replaceAll('<','&lt;').replaceAll('>','&gt;').replaceAll('"','&quot;').replaceAll("'",'&#39;')}
@@ -62,15 +162,12 @@ function scoreRow(r){let s=0;if(r.kwh!=null)s+=3;if(r.totalInc!=null)s+=2;if(r.t
 function pickBest(rows){const byNode=new Map();for(const row of rows){const key=row.nodeName||`UKJENT_${row.addressFound||row.pageNum}`;const ex=byNode.get(key);if(!ex||scoreRow(row)>scoreRow(ex))byNode.set(key,row)}return [...byNode.values()]}
 function extractFirst(text,regexes,group=1){for(const rx of regexes){const m=text.match(rx);if(m&&m[group])return m[group].trim()}return null}
 function extractKwhText(text){
-  const preciseSpot = text.match(/Spot\s+Bedrift\s+\d{2}\.\d{2}\.\d{2}\s*-\s*\d{2}\.\d{2}\.\d{2}\s+([0-9]{1,3}(?:\s[0-9]{3})*,\d{2})\s*kWh/i);
-  if (preciseSpot && preciseSpot[1]) return preciseSpot[1].trim();
-  const meterLine = text.match(/Forbruket\s+er\s+timesavlest\s+fra\s+din\s+strømm[aå]ler\s+([0-9]{1,3}(?:\s[0-9]{3})*,\d{2})\s*kWh/i);
-  if (meterLine && meterLine[1]) return meterLine[1].trim();
-  const genericSpotCandidates = [...text.matchAll(/Spot\s+Bedrift[\s\S]{0,120}?([0-9]{1,3}(?:\s[0-9]{3})*,\d{2})\s*kWh/ig)].map(m => m[1]);
-  if (genericSpotCandidates.length) {
-    const sane = genericSpotCandidates.map(parseNumberNo).filter(n => n != null && n > 0 && n < 100000);
-    if (sane.length) return String(sane[0]).replace('.', ',');
-  }
+  const preciseSpot=text.match(/Spot\s+Bedrift\s+\d{2}\.\d{2}\.\d{2}\s*-\s*\d{2}\.\d{2}\.\d{2}\s+([0-9]{1,3}(?:\s[0-9]{3})*,\d{2})\s*kWh/i);
+  if(preciseSpot&&preciseSpot[1]) return preciseSpot[1].trim();
+  const meterLine=text.match(/Forbruket\s+er\s+timesavlest\s+fra\s+din\s+strømm[aå]ler\s+([0-9]{1,3}(?:\s[0-9]{3})*,\d{2})\s*kWh/i);
+  if(meterLine&&meterLine[1]) return meterLine[1].trim();
+  const generic=[...text.matchAll(/Spot\s+Bedrift[\s\S]{0,120}?([0-9]{1,3}(?:\s[0-9]{3})*,\d{2})\s*kWh/ig)].map(m=>m[1]);
+  if(generic.length){const sane=generic.map(parseNumberNo).filter(n=>n!=null&&n>0&&n<100000); if(sane.length) return String(sane[0]).replace('.',',');}
   return null;
 }
 function extractPageData(text,pageNum){
@@ -80,21 +177,67 @@ function extractPageData(text,pageNum){
   const kwhText=extractKwhText(text);
   const exText=extractFirst(text,[/Sum\s+ekskl\.\s*mva\.\s*([0-9\s.,]+)\s*kr/i,/Sum\s+ekskl\.?\s*mva\.?\s*([0-9\s.,]+)\s*kr/i]);
   const incText=extractFirst(text,[/Beløp\s+inkl\.\s*mva\.\s*([0-9\s.,]+)\s*kr/i,/Belop\s+inkl\.\s*mva\.\s*([0-9\s.,]+)\s*kr/i]);
-  let kwh=parseNumberNo(kwhText);
-  if (kwh != null && kwh > 100000) kwh = null;
-  return {pageNum,addressFound:address,meter,mpid,kwh,totalEx:parseNumberNo(exText),totalInc:parseNumberNo(incText)}
+  let kwh=parseNumberNo(kwhText); if(kwh!=null&&kwh>100000) kwh=null;
+  return {pageNum,addressFound:address,meter,mpid,kwh,totalEx:parseNumberNo(exText),totalInc:parseNumberNo(incText)};
 }
 function matchNode(row){const meter=digitsOnly(row.meter),mpid=digitsOnly(row.mpid),addrKey=normalizeAddressKey(row.addressFound);for(const n of NODES){const nodeAddrKey=normalizeAddressKey(n.address),lookup=digitsOnly(n.lookupId);if(meter&&lookup&&meter===lookup)return{nodeName:n.name,reason:'Målernummer'};if(mpid&&lookup&&mpid===lookup)return{nodeName:n.name,reason:'Målepunkt-ID'};if(addrKey&&nodeAddrKey&&(addrKey.includes(nodeAddrKey)||nodeAddrKey.includes(addrKey)))return{nodeName:n.name,reason:'Adresse'}}return{nodeName:'Ukjent',reason:'Ingen match'}}
-function renderRows(rows){currentRows=rows;if(!rows.length){els.resultBody.innerHTML='<tr><td colspan="10" class="wraptext muted">Ingen data å vise.</td></tr>';updateStats([]);els.csvBtn.disabled=true;els.copyBtn.disabled=true;return}els.resultBody.innerHTML=rows.map(r=>`<tr><td><span class="badge ${r.nodeName!=='Ukjent'?'ok':'warn'}">${r.nodeName!=='Ukjent'?'Matchet':'Ukjent'}</span></td><td>${escapeHtml(r.nodeName)}</td><td class="wraptext">${escapeHtml(r.addressFound||'')}</td><td>${r.kwh!=null?formatNo(r.kwh,2,'kWh'):''}</td><td>${r.totalInc!=null?formatNo(r.totalInc,2,'kr'):''}</td><td>${r.totalEx!=null?formatNo(r.totalEx,2,'kr'):''}</td><td>${escapeHtml(r.meter||'')}</td><td>${escapeHtml(r.mpid||'')}</td><td>${escapeHtml(r.matchReason||'')}</td><td>${r.pageNum||''}</td></tr>`).join('');updateStats(rows);els.csvBtn.disabled=false;els.copyBtn.disabled=false}
-function updateStats(rows){els.statCount.textContent=String(rows.length);els.statKwh.textContent=formatNo(rows.reduce((a,b)=>a+(b.kwh||0),0),2,'kWh');els.statInc.textContent=formatNo(rows.reduce((a,b)=>a+(b.totalInc||0),0),2,'kr');els.statEx.textContent=formatNo(rows.reduce((a,b)=>a+(b.totalEx||0),0),2,'kr')}
 function loadScript(src){return new Promise((resolve,reject)=>{const s=document.createElement('script');s.src=src;s.onload=()=>resolve(src);s.onerror=()=>reject(new Error('Kunne ikke laste '+src));document.head.appendChild(s);});}
 async function ensurePdfJs(){if(window.pdfjsLib)return window.pdfjsLib;log('Forsøker lokal PDF.js ...');try{await loadScript('./pdf.min.js');if(window.pdfjsLib){window.pdfjsLib.GlobalWorkerOptions.workerSrc='./pdf.worker.min.js';log('PDF.js lastet lokalt fra samme mappe som index.html');return window.pdfjsLib}}catch(err){log(err.message,'warn')}log('Forsøker CDN fallback ...');const cdnPairs=[{main:'https://cdnjs.cloudflare.com/ajax/libs/pdf.js/2.6.347/pdf.min.js',worker:'https://cdnjs.cloudflare.com/ajax/libs/pdf.js/2.6.347/pdf.worker.min.js'},{main:'https://unpkg.com/pdfjs-dist@2.6.347/build/pdf.min.js',worker:'https://unpkg.com/pdfjs-dist@2.6.347/build/pdf.worker.min.js'}];for(const pair of cdnPairs){try{await loadScript(pair.main);if(window.pdfjsLib){window.pdfjsLib.GlobalWorkerOptions.workerSrc=pair.worker;log('PDF.js lastet fra CDN: '+pair.main);return window.pdfjsLib}}catch(err){log(err.message,'warn')}}throw new Error('PDF.js ble ikke lastet. Verken lokal fil eller CDN fungerte.')}
 async function extractTextFromPdf(file){const lib=await ensurePdfJs();const buffer=await file.arrayBuffer();const task=lib.getDocument({data:buffer});const pdf=await task.promise;log(`PDF lastet: ${file.name} (${pdf.numPages} sider)`);const pages=[];for(let i=1;i<=pdf.numPages;i++){const page=await pdf.getPage(i);const tc=await page.getTextContent();pages.push({pageNum:i,text:tc.items.map(it=>it.str).join(' ')})}return pages}
-async function processFile(file){resetLog();renderRows([]);if(!file)return;log(`Starter analyse av ${file.name}`);try{const pages=await extractTextFromPdf(file);const extracted=[];for(const p of pages){const row=extractPageData(p.text,p.pageNum);const hasInteresting=row.kwh!=null||row.totalInc!=null||row.totalEx!=null||row.addressFound||row.meter||row.mpid;if(!hasInteresting)continue;const match=matchNode(row);extracted.push({...row,nodeName:match.nodeName,matchReason:match.reason})}log(`Fant ${extracted.length} råtreff i dokumentet.`);const deduped=pickBest(extracted).filter(r=>r.kwh!=null||r.totalInc!=null||r.totalEx!=null).sort((a,b)=>a.nodeName.localeCompare(b.nodeName,'no'));renderRows(deduped);log(`Viser ${deduped.length} unike rader etter filtrering.`)}catch(err){console.error(err);log(err.message||String(err),'error');els.resultBody.innerHTML=`<tr><td colspan="10" class="wraptext">Feil ved parsing: ${escapeHtml(err.message||String(err))}</td></tr>`}}
-function exportCsv(){if(!currentRows.length)return;const headers=['Status','Node','Adresse','KWh','Sum inkl mva','Sum ekskl mva','Målernummer','Målepunkt-ID','Matchgrunnlag','Side'];const lines=[headers.join(';')];for(const r of currentRows){const vals=[r.nodeName!=='Ukjent'?'Matchet':'Ukjent',r.nodeName,r.addressFound||'',r.kwh!=null?String(r.kwh).replace('.',','):'',r.totalInc!=null?String(r.totalInc).replace('.',','):'',r.totalEx!=null?String(r.totalEx).replace('.',','):'',r.meter||'',r.mpid||'',r.matchReason||'',r.pageNum||''].map(v=>`"${String(v).replaceAll('"','""')}"`);lines.push(vals.join(';'))}const blob=new Blob(['\ufeff'+lines.join('\n')],{type:'text/csv;charset=utf-8;'});const a=document.createElement('a');const url=URL.createObjectURL(blob);a.href=url;a.download='faktura_noder.csv';document.body.appendChild(a);a.click();a.remove();URL.revokeObjectURL(url);log('CSV eksportert.')}
-async function copyTable(){if(!currentRows.length)return;const headers=['Status','Node','Adresse','KWh','Sum inkl mva','Sum ekskl mva','Målernummer','Målepunkt-ID','Matchgrunnlag','Side'];const lines=[headers.join('\t')];for(const r of currentRows){lines.push([r.nodeName!=='Ukjent'?'Matchet':'Ukjent',r.nodeName,r.addressFound||'',r.kwh!=null?formatNo(r.kwh,2):'',r.totalInc!=null?formatNo(r.totalInc,2):'',r.totalEx!=null?formatNo(r.totalEx,2):'',r.meter||'',r.mpid||'',r.matchReason||'',r.pageNum||''].join('\t'))}try{await navigator.clipboard.writeText(lines.join('\n'));log('Tabellen er kopiert til utklippstavlen.')}catch{log('Klarte ikke å kopiere til utklippstavlen.','warn')}}
-function loadSample(){resetLog();renderRows([{nodeName:'Bugården',addressFound:'TENNISVEIEN 19',kwh:3688.56,totalInc:6948.13,totalEx:5558.50,meter:'7359992897199153',mpid:'707057500041931319',matchReason:'Målernummer',pageNum:43},{nodeName:'Enga',addressFound:'Enga 7',kwh:3003.41,totalInc:5579.73,totalEx:4463.77,meter:'7359992902210538',mpid:'707057500041899633',matchReason:'Målepunkt-ID',pageNum:31},{nodeName:'Kilen',addressFound:'HEGNASLETTA 9',kwh:2657.18,totalInc:4977.66,totalEx:3982.12,meter:'7359992895276245',mpid:'707057500041933566',matchReason:'Målernummer',pageNum:2}]);log('Testvisning lastet.')}
-els.pickBtn.addEventListener('click',()=>els.fileInput.click());els.fileInput.addEventListener('change',e=>processFile(e.target.files[0]));els.sampleBtn.addEventListener('click',loadSample);els.clearBtn.addEventListener('click',()=>{els.fileInput.value='';resetLog();renderRows([])});els.csvBtn.addEventListener('click',exportCsv);els.copyBtn.addEventListener('click',copyTable);['dragenter','dragover'].forEach(evt=>els.dropzone.addEventListener(evt,e=>{e.preventDefault();e.stopPropagation();els.dropzone.classList.add('dragover')}));['dragleave','drop'].forEach(evt=>els.dropzone.addEventListener(evt,e=>{e.preventDefault();e.stopPropagation();els.dropzone.classList.remove('dragover')}));els.dropzone.addEventListener('drop',e=>{const file=e.dataTransfer.files?.[0];if(file)processFile(file)});
+function getVisibleColumns(){return COLUMNS.filter(c=>columnState[c.key]);}
+function renderColumnControls(){els.columnToggles.innerHTML=COLUMNS.map(c=>`<label class="check"><input type="checkbox" data-col="${c.key}" ${columnState[c.key]?'checked':''}/> ${c.label}</label>`).join('');els.columnToggles.querySelectorAll('input[type="checkbox"]').forEach(chk=>chk.addEventListener('change',e=>{columnState[e.target.dataset.col]=e.target.checked; renderTable(currentRows);}));}
+function renderHeader(){const cols=getVisibleColumns(); els.theadRow.innerHTML=cols.map(c=>`<th>${escapeHtml(c.label)}</th>`).join('');}
+function cellHtml(row,key){
+  if(key==='status') return `<span class="badge ${row.nodeName!=='Ukjent'?'ok':'warn'}">${row.nodeName!=='Ukjent'?'Matchet':'Ukjent'}</span>`;
+  if(key==='kwh') return row.kwh!=null?formatNo(row.kwh,2,'kWh'):'';
+  if(key==='totalInc') return row.totalInc!=null?formatNo(row.totalInc,2,'kr'):'';
+  if(key==='totalEx') return row.totalEx!=null?formatNo(row.totalEx,2,'kr'):'';
+  return escapeHtml(row[key] ?? '');
+}
+function renderTable(rows){renderHeader(); currentRows=rows; const cols=getVisibleColumns(); if(!rows.length){els.resultBody.innerHTML=`<tr><td colspan="${Math.max(cols.length,1)}" class="wraptext muted">Ingen data å vise.</td></tr>`; updateStats([]); els.csvBtn.disabled=true; els.copyBtn.disabled=true; return;} els.resultBody.innerHTML=rows.map(r=>`<tr>${cols.map(c=>`<td class="${c.key==='addressFound'?'wraptext':''}">${cellHtml(r,c.key)}</td>`).join('')}</tr>`).join(''); updateStats(rows); els.csvBtn.disabled=false; els.copyBtn.disabled=false;}
+function applyFilters(){
+  let rows=[...rawRows];
+  const query=els.searchInput.value.trim().toLowerCase();
+  const status=els.statusFilter.value;
+  const matchFilter=els.matchFilter.value;
+  const hideUnknown=els.hideUnknownChk.checked;
+  const unknownBottom=els.sortUnknownBottomChk.checked;
+  if(hideUnknown) rows=rows.filter(r=>r.nodeName!=='Ukjent');
+  if(status==='matched') rows=rows.filter(r=>r.nodeName!=='Ukjent');
+  if(status==='unknown') rows=rows.filter(r=>r.nodeName==='Ukjent');
+  if(matchFilter!=='all') rows=rows.filter(r=>(r.matchReason||'')===matchFilter);
+  if(query){ rows=rows.filter(r=>[r.nodeName,r.addressFound,r.meter,r.mpid,r.matchReason,String(r.pageNum||'')].join(' ').toLowerCase().includes(query)); }
+  rows.sort((a,b)=>{
+    if(unknownBottom){
+      if(a.nodeName==='Ukjent' && b.nodeName!=='Ukjent') return 1;
+      if(a.nodeName!=='Ukjent' && b.nodeName==='Ukjent') return -1;
+    }
+    return String(a.nodeName||'').localeCompare(String(b.nodeName||''),'no');
+  });
+  renderTable(rows);
+}
+function updateStats(rows){els.statCount.textContent=String(rows.length);els.statKwh.textContent=formatNo(rows.reduce((a,b)=>a+(b.kwh||0),0),2,'kWh');els.statInc.textContent=formatNo(rows.reduce((a,b)=>a+(b.totalInc||0),0),2,'kr');els.statEx.textContent=formatNo(rows.reduce((a,b)=>a+(b.totalEx||0),0),2,'kr')}
+async function processFile(file){resetLog(); rawRows=[]; renderTable([]); if(!file)return; log(`Starter analyse av ${file.name}`); try{const pages=await extractTextFromPdf(file); const extracted=[]; for(const p of pages){const row=extractPageData(p.text,p.pageNum); const hasInteresting=row.kwh!=null||row.totalInc!=null||row.totalEx!=null||row.addressFound||row.meter||row.mpid; if(!hasInteresting) continue; const match=matchNode(row); extracted.push({...row,nodeName:match.nodeName,matchReason:match.reason}); }
+  log(`Fant ${extracted.length} råtreff i dokumentet.`); rawRows=pickBest(extracted).filter(r=>r.kwh!=null||r.totalInc!=null||r.totalEx!=null); applyFilters(); log(`Viser ${currentRows.length} rader etter filtrering.`);}catch(err){console.error(err); log(err.message||String(err),'error'); els.resultBody.innerHTML=`<tr><td colspan="${getVisibleColumns().length}" class="wraptext">Feil ved parsing: ${escapeHtml(err.message||String(err))}</td></tr>`;}}
+function exportCsv(){if(!currentRows.length)return; const cols=getVisibleColumns(); const headers=cols.map(c=>c.label); const lines=[headers.join(';')]; for(const r of currentRows){ const vals=cols.map(c=>{ let v=''; if(c.key==='status') v=r.nodeName!=='Ukjent'?'Matchet':'Ukjent'; else if(c.key==='kwh') v=r.kwh!=null?String(r.kwh).replace('.',','):''; else if(c.key==='totalInc') v=r.totalInc!=null?String(r.totalInc).replace('.',','):''; else if(c.key==='totalEx') v=r.totalEx!=null?String(r.totalEx).replace('.',','):''; else v=r[c.key] ?? ''; return `"${String(v).replaceAll('"','""')}"`; }); lines.push(vals.join(';')); } const blob=new Blob(['\ufeff'+lines.join('\n')],{type:'text/csv;charset=utf-8;'}); const a=document.createElement('a'); const url=URL.createObjectURL(blob); a.href=url; a.download='faktura_noder.csv'; document.body.appendChild(a); a.click(); a.remove(); URL.revokeObjectURL(url); log('CSV eksportert.'); }
+async function copyTable(){if(!currentRows.length)return; const cols=getVisibleColumns(); const headers=cols.map(c=>c.label); const lines=[headers.join('\t')]; for(const r of currentRows){ lines.push(cols.map(c=>{ if(c.key==='status') return r.nodeName!=='Ukjent'?'Matchet':'Ukjent'; if(c.key==='kwh') return r.kwh!=null?formatNo(r.kwh,2):''; if(c.key==='totalInc') return r.totalInc!=null?formatNo(r.totalInc,2):''; if(c.key==='totalEx') return r.totalEx!=null?formatNo(r.totalEx,2):''; return String(r[c.key] ?? ''); }).join('\t')); } try{await navigator.clipboard.writeText(lines.join('\n')); log('Tabellen er kopiert til utklippstavlen.');}catch{log('Klarte ikke å kopiere til utklippstavlen.','warn');}}
+function loadSample(){resetLog(); rawRows=[{nodeName:'Bugården',addressFound:'TENNISVEIEN 19',kwh:3688.56,totalInc:6948.13,totalEx:5558.50,meter:'7359992897199153',mpid:'707057500041931319',matchReason:'Målernummer',pageNum:43},{nodeName:'Enga',addressFound:'Enga 7',kwh:3003.41,totalInc:5579.73,totalEx:4463.77,meter:'7359992902210538',mpid:'707057500041899633',matchReason:'Målepunkt-ID',pageNum:31},{nodeName:'Ukjent',addressFound:'',kwh:null,totalInc:68479.33,totalEx:54783.42,meter:'',mpid:'',matchReason:'Ingen match',pageNum:1}]; applyFilters(); log('Testvisning lastet.');}
+
+els.pickBtn.addEventListener('click',()=>els.fileInput.click());
+els.fileInput.addEventListener('change',e=>processFile(e.target.files[0]));
+els.sampleBtn.addEventListener('click',loadSample);
+els.clearBtn.addEventListener('click',()=>{els.fileInput.value=''; resetLog(); rawRows=[]; applyFilters();});
+els.csvBtn.addEventListener('click',exportCsv);
+els.copyBtn.addEventListener('click',copyTable);
+els.searchInput.addEventListener('input',applyFilters);
+els.statusFilter.addEventListener('change',applyFilters);
+els.matchFilter.addEventListener('change',applyFilters);
+els.hideUnknownChk.addEventListener('change',applyFilters);
+els.sortUnknownBottomChk.addEventListener('change',applyFilters);
+['dragenter','dragover'].forEach(evt=>els.dropzone.addEventListener(evt,e=>{e.preventDefault(); e.stopPropagation(); els.dropzone.classList.add('dragover')}));
+['dragleave','drop'].forEach(evt=>els.dropzone.addEventListener(evt,e=>{e.preventDefault(); e.stopPropagation(); els.dropzone.classList.remove('dragover')}));
+els.dropzone.addEventListener('drop',e=>{const file=e.dataTransfer.files?.[0]; if(file) processFile(file);});
+renderColumnControls(); renderHeader();
 </script>
 </body>
 </html>
